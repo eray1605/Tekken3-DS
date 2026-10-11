@@ -105,6 +105,30 @@ func test_a_prepared_track_is_silent_until_the_volume_call() -> void:
 	director.free()
 
 
+## MusicPlay of the track already playing (each round start, the same fight after CONTINUE) does not
+## start it again, FUN_8006BF80(0x7F, −1) only brings the volume back at once; a stop (every disc
+## read) forgets the track, so the next MusicPlay starts it from the beginning.
+func test_the_current_track_is_not_restarted() -> void:
+	if not require(Assets.path("music/music.json"), "no music group"):
+		return
+	var director := AudioDirector.new()
+	(Engine.get_main_loop() as SceneTree).root.add_child(director)
+	var keys: Array = director.tracks.keys()
+	var track := (keys[0] as String).to_int()
+	director.play_music(track)
+	expect(director.music.playing, "the first MusicPlay starts the track")
+	director.fade_music(0, 0)
+	director.music.stop()            # stands for a position that is no longer the beginning
+	director.play_music(track)
+	expect(not director.music.playing, "the same track is not started again")
+	expect_equal(director._music_level, 1.0, "the volume is back at once")
+	director.play_music(-1)
+	director.play_music(track)
+	expect(director.music.playing, "after a stop the track starts again")
+	director.stop_all()
+	director.free()
+
+
 ## Dropping a voice bank whose tones are still loading in the background does not wait for them:
 ## the loads are set aside and taken once finished, or taken back when the bank is wanted again.
 func test_dropped_loads_do_not_block() -> void:

@@ -35,6 +35,8 @@ var music_available := false
 var _music_volume := 1.0             ## the track's own volume
 var _music_level := 1.0              ## the fade level (MusicSetVolume)
 var _prepared := -1                  ## the track MusicPlay(track, 1) loaded, silent until the volume call
+var _track := -1                     ## the track MusicPlay started (0x800A09C8); −1 once a stop forgot it
+var _version := -1                   ## and its version (the BGM option)
 var _fade: Tween
 var _streams: Dictionary = {}       ## tone file → stream
 var _requested: Dictionary = {}     ## tone file → true: a background load is under way (_preload_bank)
@@ -113,14 +115,22 @@ func set_fighters(costume_slots: PackedInt32Array, char_ids: PackedInt32Array) -
 		_preload_bank(bank)
 
 
-## MusicPlay(track): starts a track, −1 stops the music.
+## MusicPlay(track): starts a track, −1 stops the music. The track that is already the current one
+## (every round start asks for the stage's) is not started again: only the volume goes back to full
+## at once, FUN_8006BF80(0x7F, −1); a stop (a disc read, GameFlow.disc_read) forgets the track.
 func play_music(track: int) -> void:
+	if track >= 0 and track == _track and soundtrack == _version:
+		_prepared = -1
+		fade_music(int(VOLUME_MAX), 0)
+		return
 	play_track(track, soundtrack)
 
 
 ## A track in a given version (0 ARRANGE, 1 ARCADE): the Theater's sound player picks it.
 func play_track(track: int, version: int) -> void:
 	_prepared = -1
+	_track = track
+	_version = version
 	if _fade != null:
 		_fade.kill()
 		_fade = null
