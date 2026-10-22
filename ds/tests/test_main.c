@@ -19,7 +19,12 @@
     X(test_pose_tables_file_rejects_bad_input)    \
     X(test_pose_solver_matches_port_cases)        \
     X(test_pose_solver_wide_elbow_differs)        \
-    X(test_pose_solver_matches_traces)
+    X(test_pose_solver_matches_traces)            \
+    X(test_anim_sampling_matches_port_cases)      \
+    X(test_anim_sampling_clamps_frames)           \
+    X(test_motion_set_resolves_slots)             \
+    X(test_fighter_skeleton_matches_port_cases)   \
+    X(test_fighter_rotation_xyz_identity_and_quarter_turn)
 
 #define DECLARE(name) void name(void);
 TESTS(DECLARE)

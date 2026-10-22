@@ -54,14 +54,15 @@ ds/
     core/          the C port of remake/core: no libnds, builds for the host too
       math/        fx (4.12, GTE MVMVA/GPF, MulMatrix), gte (ApplyMatrix(LV), VectorNormal, ratan2,
                    RTPS, division), c_rand
-      fighter/     pose_tables, joint_frame, pose_solver
+      fighter/     pose_tables, joint_frame, pose_solver, anim_stream (sampling at run time),
+                   motion_bank (banks read in place, MotionSet), fighter_skeleton
     content/       loaders for the converted data (byte readers, tables/pose.bin)
     dev/           measurements on the DS (pose_bench)
     presentation/  (D1+) 3D (fighters, stage, effects), 2D screens, HUD, sound
     platform/      (D1+) pads, save data, timing
   tests/           host tests of core and content (C)
   nitrofs/         converted data (git-ignored)
-tools/ds/          setup_toolchain.sh, screenshot.sh, run_tests.sh, pose_cases.py
+tools/ds/          setup_toolchain.sh, screenshot.sh, run_tests.sh, core_cases.py
 tools/ds_import/   the DS converter: remake/imported → ds/nitrofs
 ```
 
@@ -88,7 +89,9 @@ Input: the game's pad word (PsyQ layout, `remake/platform/pad_state.gd`) from th
 **Status: in progress (2026-10-22).** Done without game data:
 
 - `core/math` (fx, gte, c_rand) and the pose pipeline (`PoseTables`, `JointFrame`, `PoseSolver` with the Gameplay-fix flag `wide_elbow`) in C.
-- Host tests (`make test-ds`, seconds): the math helpers as in `test_fx.gd`, and `PoseSolver` against the verified Python port (`tools/research/pose.py`) on 2,400 frames of random poses with synthetic tables of the game's shape (`tools/ds/pose_cases.py`), slots carried over as in the traces. Branches covered: all but the bend clamps (cos above ±1), which reachable lengths do not produce. The comparison catches single-constant changes (checked by mutating the solver).
+- Host tests (`make test-ds`, seconds): the math helpers as in `test_fx.gd`, and `PoseSolver` against the verified Python port (`tools/research/pose.py`) on 2,400 frames of random poses with synthetic tables of the game's shape (`tools/ds/core_cases.py`), slots carried over as in the traces. Branches covered: all but the bend clamps (cos above ±1), which reachable lengths do not produce. The comparison catches single-constant changes (checked by mutating the solver).
+- Motion sampling at run time (`anim_stream`, `motion_bank`): the DS keeps the banks' compressed streams instead of the remake's baked poses (98 bytes per frame would not fit 4 MB). Tested against `tools/research/motion.py` (bit-exact with AnimDecodePose) on 300 random streams, 9,522 frames, with random spline tables; slot lookup through the common bank on a bank built in the test.
+- `FighterSkeleton` (pose → root → 22 joints; attachments rigid, their dynamics TODO) against `pose.py` and `fight_sim.root_rotation` with a random rig, 400 frames on one skeleton.
 - The trace test (`pose_divmot00`, `pose_divmot99` with the converted tables) is written and runs once `make convert`, `make convert-ds` and `tools/research/export_traces.py` have run; until then it is skipped.
 - `tools/ds_import/` writes `tables/pose.bin` from `remake/imported/tables/pose.json`.
 - On the DS (DeSmuME), one pose build costs about 0.28 ms in ARM mode (0.9 ms in Thumb): two fighters about 3.4 % of a frame. DeSmuME's timing is approximate; real hardware to be measured.
@@ -97,7 +100,8 @@ Open (needs a converted disc: Japan Rev.1, Japan or USA; the European release is
 
 - Pass the pose traces bit for bit.
 - `tools/ds_import/`: one character's model (parts, seams, textures as 4/8 bpp) and motion banks into `ds/nitrofs/`; size report against the RAM and VRAM budgets. The ROM packs `ds/nitrofs/` (NitroFS) and loads the tables from it.
-- Motion sampling and the fighter skeleton (`FighterSkeleton`) in C.
+- The DS converter's raw inputs from the disc: the motion banks and the spline tables (`--image`, via `tools/remake_import/common.Disc`), and each costume's rig from `model.json`.
+- Costume attachments' dynamics (`AttachmentDynamics`).
 - The fighter in its stance on the DS, animated by the C core, at 60 Hz with its CPU time shown.
 
 ### D2: The fight

@@ -1,4 +1,4 @@
-// PoseSolver against the verified Python port (synthetic tables, tools/ds/pose_cases.py) and, when
+// PoseSolver against the verified Python port (synthetic tables, tools/ds/core_cases.py) and, when
 // converted data and golden traces exist, against the pose traces of divmot00 and divmot99
 // (remake/tests/core/test_pose_solver.gd). Every frame of an animation is replayed with the slots
 // carried over, as while one move plays.
@@ -79,7 +79,7 @@ void test_pose_tables_file_rejects_bad_input(void)
     size_t size = 0;
     uint8_t *file = test_read_file(test_paths.cases_dir, "pose_cases_tables.bin", &size);
     if (!file) {
-        test_skip("no pose_cases_tables.bin (tools/ds/pose_cases.py)");
+        test_skip("no pose_cases_tables.bin (tools/ds/core_cases.py)");
         return;
     }
     EXPECT(pose_tables_parse(file, size, &tables), "the synthetic tables");
@@ -95,13 +95,13 @@ void test_pose_solver_matches_port_cases(void)
 {
     static PoseTables tables;
     if (!load_tables(test_paths.cases_dir, "pose_cases_tables.bin", &tables)) {
-        test_skip("no pose_cases_tables.bin (tools/ds/pose_cases.py)");
+        test_skip("no pose_cases_tables.bin (tools/ds/core_cases.py)");
         return;
     }
     size_t size = 0;
     uint8_t *data = test_read_file(test_paths.cases_dir, "pose_cases.bin", &size);
     if (!data) {
-        test_skip("no pose_cases.bin (tools/ds/pose_cases.py)");
+        test_skip("no pose_cases.bin (tools/ds/core_cases.py)");
         return;
     }
     PoseSolver solver = {&tables, false};
@@ -116,7 +116,7 @@ void test_pose_solver_wide_elbow_differs(void)
     // inv · 0x9204 overflows 32 bits in the original; the fix keeps the product.
     static PoseTables tables;
     if (!load_tables(test_paths.cases_dir, "pose_cases_tables.bin", &tables)) {
-        test_skip("no pose_cases_tables.bin (tools/ds/pose_cases.py)");
+        test_skip("no pose_cases_tables.bin (tools/ds/core_cases.py)");
         return;
     }
     // Every Euler angle zero: the root and chest frames are plain translations and the right

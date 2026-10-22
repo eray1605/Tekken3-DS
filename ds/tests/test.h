@@ -8,7 +8,7 @@
 #include <stdint.h>
 
 typedef struct {
-    const char *cases_dir;  // synthetic cases (tools/ds/pose_cases.py)
+    const char *cases_dir;  // synthetic cases (tools/ds/core_cases.py)
     const char *nitrofs;    // converted DS data (tools/ds_import/convert.py)
     const char *traces;     // golden traces (work/traces)
 } TestPaths;

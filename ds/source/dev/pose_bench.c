@@ -24,7 +24,7 @@ static uint32_t isqrt(uint32_t v)
     return root;
 }
 
-// The same construction as tools/ds/pose_cases.py, with libnds's sine instead of Python's.
+// The same construction as tools/ds/core_cases.py, with libnds's sine instead of Python's.
 static void build_tables(void)
 {
     for (int i = 0; i < POSE_SIN_ENTRIES; i++)
