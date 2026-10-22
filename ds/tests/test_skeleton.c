@@ -8,6 +8,7 @@
 #include <string.h>
 
 #include "content/bytes.h"
+#include "content/characters_file.h"
 #include "content/pose_tables_file.h"
 #include "content/rig_file.h"
 #include "core/fighter/fighter_skeleton.h"
@@ -169,4 +170,38 @@ void test_fighter_rotation_xyz_identity_and_quarter_turn(void)
     EXPECT(memcmp(&y, &WANT, sizeof(Mat3)) == 0, "a quarter turn about y: [%d %d %d / %d %d %d / %d %d %d]",
            (int)y.m[0], (int)y.m[1], (int)y.m[2], (int)y.m[3], (int)y.m[4], (int)y.m[5], (int)y.m[6], (int)y.m[7],
            (int)y.m[8]);
+}
+
+void test_characters_file_parses_and_rejects_bad_input(void)
+{
+    // Two keys: costume 7 with bank 9, and no costume.
+    static uint8_t data[12 + 2 * 16] = {'T', '3', 'C', 'H', 1, 0, 0, 0, 2, 0, 0, 0, 7, 9, 'A', 'B'};
+    data[12 + 16] = 0xFF;
+    memset(data + 12 + 16 + 2, 'x', 14);   // a name without its zero: cut
+    static CharacterTable table;
+    EXPECT(characters_parse(data, sizeof(data), &table), "two keys");
+    EXPECT_EQ(table.count, 2);
+    EXPECT_EQ(table.keys[0].costume_slot, 7);
+    EXPECT_EQ(table.keys[0].bank_type, 9);
+    EXPECT(strcmp(table.keys[0].name, "AB") == 0, "the first name");
+    EXPECT_EQ(table.keys[1].costume_slot, -1);
+    EXPECT_EQ((int)strlen(table.keys[1].name), CHARACTER_NAME_BYTES - 1);
+    EXPECT(!characters_parse(data, sizeof(data) - 1, &table), "a short file");
+    data[8] = CHARACTER_KEYS_MAX + 1;
+    EXPECT(!characters_parse(data, sizeof(data), &table), "too many keys");
+    data[8] = 2;
+    data[4] = 2;
+    EXPECT(!characters_parse(data, sizeof(data), &table), "another version");
+
+    size_t size = 0;
+    uint8_t *file = test_read_file(test_paths.nitrofs, CHARACTERS_FILE, &size);
+    if (!file) {
+        test_skip("no converted character table (make convert-ds)");
+        return;
+    }
+    EXPECT(characters_parse(file, size, &table), "the converted table");
+    // Key 0, the first character's first costume, wears costume slot 0 and moves with bank 0.
+    EXPECT_EQ(table.keys[0].costume_slot, 0);
+    EXPECT_EQ(table.keys[0].bank_type, 0);
+    free(file);
 }

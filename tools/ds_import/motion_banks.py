@@ -2,7 +2,7 @@
 (divmot00–divmot20 and the common bank divmot99, tools/remake_import/motion_bake.BANKS).
 
 The DS reads the banks in place and samples their animation streams at run time
-(ds/source/core/fighter/motion_bank.c, anim_stream.arm.c); the remake's baked poses would not fit.
+(ds/source/core/fighter/motion_bank.c, anim_stream.itcm.arm.c); the remake's baked poses would not fit.
 """
 
 from __future__ import annotations

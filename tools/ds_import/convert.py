@@ -21,6 +21,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(1, str(ROOT / "tools" / "remake_import"))
 
+import characters  # noqa: E402
 import common  # noqa: E402  (puts tools/research on the import path too)
 import motion_banks  # noqa: E402
 import pose_tables  # noqa: E402
@@ -30,7 +31,7 @@ import spline_tables  # noqa: E402
 DEFAULT_IMPORTED = ROOT / "remake" / "imported"
 DEFAULT_OUT = ROOT / "ds" / "nitrofs"
 # What the DS build uses so far (D1: one fighter): from the converted tree, and from the disc.
-MODULES = [pose_tables, rigs]
+MODULES = [pose_tables, rigs, characters]
 DISC_MODULES = [motion_banks, spline_tables]
 
 log = logging.getLogger("ds_import")

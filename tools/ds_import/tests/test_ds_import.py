@@ -10,6 +10,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+import characters
 import convert
 import motion
 import motion_banks
@@ -134,6 +135,24 @@ class RigsTest(unittest.TestCase):
         self.assertEqual(data[:12], b"T3RG" + struct.pack("<Ii", 1, scale))
         for j in range(rigs.JOINTS):
             self.assertEqual(struct.unpack_from("<b3x3i", data, 12 + 16 * j), (parents[j], *offsets[j]))
+
+
+class CharactersTest(unittest.TestCase):
+    def test_slot_and_clamped_bank_per_key(self) -> None:
+        fight = {"characters": [{"bank": b, "name": n} for b, n in ((0, "A"), (9, "B"), (25, "LONG NAME HERE!"))]}
+        fighter = {"costume_keys": [0, -1, 7]}
+        rows = characters.entries(fight, fighter)
+        self.assertEqual(rows, [(0, 0, "A"), (-1, 9, "B"), (7, 20, "LONG NAME HERE!")])
+        data = characters.encode(rows)
+        self.assertEqual(data[:12], b"T3CH" + struct.pack("<II", 1, 3))
+        self.assertEqual(len(data), 12 + 16 * 3)
+        self.assertEqual(struct.unpack_from("<bB14s", data, 12 + 16 * 2), (7, 20, b"LONG NAME HER\0"))
+
+    def test_keys_past_the_records_take_record_0x58(self) -> None:
+        fight = {"characters": [{"bank": k % 21, "name": str(k)} for k in range(0x5D)]}
+        rows = characters.entries(fight, {"costume_keys": [0] * 0x5F})
+        self.assertEqual(rows[0x5C][2], "92")
+        self.assertEqual(rows[0x5D][2], "88")
 
 
 class ConvertTest(unittest.TestCase):

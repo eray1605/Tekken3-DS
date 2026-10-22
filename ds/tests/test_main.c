@@ -27,6 +27,7 @@
     X(test_motion_set_resolves_slots)             \
     X(test_fighter_skeleton_matches_port_cases)   \
     X(test_rig_file_rejects_bad_input)            \
+    X(test_characters_file_parses_and_rejects_bad_input) \
     X(test_fighter_skeleton_matches_port_on_converted_data) \
     X(test_fighter_rotation_xyz_identity_and_quarter_turn)
 

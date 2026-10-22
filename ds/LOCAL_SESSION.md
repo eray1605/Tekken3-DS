@@ -43,13 +43,17 @@ Japan-Rev.1-Disc** erzeugen (`extract_work.py` sucht alle drei Japan/USA-Images 
 
 ## 4. DS-Toolchain auf dem Mac (für `make nds`)
 
-`tools/ds/setup_toolchain.sh` ist nur für Linux (apt). Auf dem Mac BlocksDS auf dem offiziellen
-Weg installieren: Wonderful Toolchain + BlocksDS-Pakete, Anleitung unter
-<https://blocksds.skylyrac.net/docs/setup/> (macOS). `ds/Makefile` findet dann
-`/opt/wonderful/...` und `/opt/blocksds/core` von selbst. Das Projekt ist auf BlocksDS v1.16.0
-getestet; eine neuere Version sollte gehen, sonst v1.16.0 pinnen.
+Ohne Wonderful/`sudo`: devkitARM (devkitPro, `/opt/devkitpro`) liefert den Compiler,
+`tools/ds/setup_toolchain.sh` baut picolibc und BlocksDS v1.16.0 nach `~/.local` (meson und ninja
+z. B. aus der venv: `pip install meson ninja`):
 
-Emulator: melonDS (`make run-nds NDS_EMU=/Applications/melonDS.app/Contents/MacOS/melonDS`).
+```sh
+PATH="$PWD/.venv/bin:$PATH" tools/ds/setup_toolchain.sh
+```
+
+`ds/Makefile` findet `~/.local/blocksds/core` und `~/.local/t3ds-toolchain` von selbst.
+Emulator: melonDS; `Tekken3-DS.command` (Doppelklick im Finder) baut das ROM bei Bedarf neu und
+startet es in melonDS (`/Applications` oder `~/Applications`).
 
 ## 5. Neue Session starten
 
