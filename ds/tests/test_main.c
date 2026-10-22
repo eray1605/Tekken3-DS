@@ -29,7 +29,9 @@
     X(test_rig_file_rejects_bad_input)            \
     X(test_characters_file_parses_and_rejects_bad_input) \
     X(test_fighter_skeleton_matches_port_on_converted_data) \
-    X(test_fighter_rotation_xyz_identity_and_quarter_turn)
+    X(test_fighter_rotation_xyz_identity_and_quarter_turn) \
+    X(test_model_file_checks_its_layout)          \
+    X(test_fighter_mesh_matches_port_on_converted_data)
 
 #define DECLARE(name) void name(void);
 TESTS(DECLARE)

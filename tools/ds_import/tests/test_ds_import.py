@@ -10,8 +10,11 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+import numpy as np
+
 import characters
 import convert
+import models
 import motion
 import motion_banks
 import rigs
@@ -153,6 +156,65 @@ class CharactersTest(unittest.TestCase):
         rows = characters.entries(fight, {"costume_keys": [0] * 0x5F})
         self.assertEqual(rows[0x5C][2], "92")
         self.assertEqual(rows[0x5D][2], "88")
+
+
+class ModelsTest(unittest.TestCase):
+    def test_texture_side_is_a_power_of_two_inside_the_page(self) -> None:
+        self.assertEqual(models.texture_side(10, 12), (10, 8))
+        self.assertEqual(models.texture_side(0, 63), (0, 64))
+        self.assertEqual(models.texture_side(64, 65), (64, 8))
+        self.assertEqual(models.texture_side(250, 255), (248, 8))
+        self.assertEqual(models.texture_side(130, 200), (128, 128))
+        self.assertEqual(models.texture_side(0, 255), (0, 256))
+
+    def test_material_crops_its_rectangle(self) -> None:
+        page = np.arange(256 * 256).reshape(256, 256) % 16
+        clut = [0x7FFF - i for i in range(16)]
+        m = models.material_texture(page, clut, 4, [(20, 40), (30, 47)])
+        self.assertEqual((m.u0, m.v0, m.width, m.height), (20, 40, 16, 8))
+        self.assertTrue((m.texels == page[40:48, 20:36]).all())
+        self.assertEqual(m.palette, clut)
+        self.assertFalse(m.transparent)
+
+    def test_transparent_colours_move_to_index_0(self) -> None:
+        page = np.tile(np.arange(16), (8, 1))
+        clut = [0x1234, 1, 2, 0, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 0, 0x8000]
+        m = models.material_texture(page, clut, 4, [(0, 0), (15, 7)])
+        self.assertTrue(m.transparent)
+        # 3 and 14 read 0; the opaque colour of index 0 moved to 3; 0x8000 (opaque black) stays.
+        self.assertEqual(m.palette[0], 0)
+        self.assertEqual(m.palette[3], 0x1234)
+        self.assertEqual(m.palette[15], 0)
+        self.assertEqual(list(m.texels[0]), [3, 1, 2, 0, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 0, 15])
+        shown = [m.palette[i] for i in m.texels[0]]
+        want = [c & 0x7FFF for c in clut]
+        self.assertEqual(shown, want)
+
+    def test_transparent_index_0_alone_stays(self) -> None:
+        page = np.zeros((8, 8), dtype=int)
+        m = models.material_texture(page, [0] + [5] * 15, 4, [(0, 0), (7, 7)])
+        self.assertTrue(m.transparent)
+        self.assertEqual(m.palette, [0] + [5] * 15)
+
+    def test_encoding_packs_4_bit_texels_low_nibble_first(self) -> None:
+        texels = np.array([[1, 2] * 4] * 8)
+        m = models.Material(4, 8, 8, 0, 0, [7] * 16, texels, True)
+        data = m.encode()
+        self.assertEqual(struct.unpack_from("<BBHHHI", data), (4, 1, 8, 8, 16, 32))
+        self.assertEqual(data[12 + 32], 0x21)
+        self.assertEqual(len(data), 12 + 32 + 32)
+
+    def test_model_layout(self) -> None:
+        model = models.Model(vertices=[(0, 1, 2, 3), (11, -4, 5, -6)], normals=[(1, 0, 4096, 0)],
+                             materials=[models.Material(8, 8, 8, 0, 0, list(range(256)), np.zeros((8, 8)), False)],
+                             batches=[(0, 4, 1, 0, 1)], corners=[(0, 1, 0, 128, 3, 4)] * 4)
+        data = models.encode(model)
+        self.assertEqual(data[:20], b"T3MD" + struct.pack("<IHHHHI", 1, 2, 1, 1, 1, 4))
+        self.assertEqual(struct.unpack_from("<Bx3h", data, 28), (11, -4, 5, -6))
+        material_end = 44 + 12 + 512 + 64
+        self.assertEqual(struct.unpack_from("<HBBII", data, material_end), (0, 4, 1, 0, 1))
+        self.assertEqual(struct.unpack_from("<HHHBBBx", data, material_end + 12), (0, 1, 0, 128, 3, 4))
+        self.assertEqual(len(data), material_end + 12 + 4 * 10)
 
 
 class ConvertTest(unittest.TestCase):

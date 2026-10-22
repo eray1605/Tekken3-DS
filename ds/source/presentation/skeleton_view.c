@@ -26,6 +26,7 @@ static void cross(const Vec3 *p)
 void skeleton_view_draw(const FighterSkeleton *skeleton)
 {
     const FighterRig *rig = skeleton->rig;
+    glBindTexture(0, 0);
     glPolyFmt(POLY_ALPHA(31) | POLY_CULL_NONE);
     glBegin(GL_TRIANGLES);
     for (int m = 0; m < SKELETON_ALL_JOINTS; m++) {

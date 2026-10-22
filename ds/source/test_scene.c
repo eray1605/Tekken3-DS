@@ -21,6 +21,7 @@ void test_scene_init_gl(void)
 {
     glInit();
     glEnable(GL_ANTIALIAS);
+    glEnable(GL_TEXTURE_2D);
     glClearColor(2, 4, 10, 31);
     glClearPolyID(63);
     glClearDepth(GL_MAX_DEPTH);
@@ -42,6 +43,7 @@ void test_scene_step(TestScene *scene, uint16_t pad)
 
 static void draw_floor(void)
 {
+    glBindTexture(0, 0);
     glBegin(GL_QUADS);
     for (int z = -FLOOR_TILES / 2; z < FLOOR_TILES / 2; z++) {
         for (int x = -FLOOR_TILES / 2; x < FLOOR_TILES / 2; x++) {
@@ -60,6 +62,7 @@ static void draw_floor(void)
 
 static void draw_cube(void)
 {
+    glBindTexture(0, 0);
     static const v16 H = floattov16(0.5);
     static const v16 CORNERS[8][3] = {
         {-H, -H, -H}, {H, -H, -H}, {H, H, -H}, {-H, H, -H},

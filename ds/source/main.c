@@ -31,6 +31,8 @@ int main(int argc, char **argv)
 
     videoSetMode(MODE_0_3D);
     vramSetBankA(VRAM_A_TEXTURE);
+    vramSetBankB(VRAM_B_TEXTURE);
+    vramSetBankE(VRAM_E_TEX_PALETTE);
     consoleDemoInit();
     lcdMainOnTop();
     test_scene_init_gl();
@@ -43,14 +45,15 @@ int main(int argc, char **argv)
     if (fighter) {
         printf("\x1b[5;1HUp/Down costume  L/R camera");
         printf("\x1b[6;1HA/B move slot    Start stance");
+        printf("\x1b[7;1HSelect skeleton/model");
     } else {
         printf("\x1b[5;1Hno converted data: %s", stance.error ? stance.error : "NitroFS");
         printf("\x1b[6;1H(make convert-ds, then make nds)");
     }
 
     PoseBenchResult bench = pose_bench_run(BENCH_CALLS);
-    printf("\x1b[20;1Hpose solver, %lu calls:", (unsigned long)bench.calls);
-    printf("\x1b[21;1H mean %lu best %lu worst %lu us", (unsigned long)bench.mean_us,
+    printf("\x1b[21;1Hpose solver, %lu calls:", (unsigned long)bench.calls);
+    printf("\x1b[22;1H mean %lu best %lu worst %lu us", (unsigned long)bench.mean_us,
            (unsigned long)bench.best_us, (unsigned long)bench.worst_us);
 
     TestScene scene = {0, 0};
@@ -86,8 +89,12 @@ int main(int argc, char **argv)
                    (unsigned long)stance.core_worst_us);
             printf("\x1b[16;1H sample %4lu  skeleton %4lu us", (unsigned long)stance.sample_us,
                    (unsigned long)(stance.core_us - stance.sample_us));
+            printf("\x1b[17;1Hdraw  %4lu us (pose %4lu)", (unsigned long)stance.draw_us,
+                   (unsigned long)timerTicks2usec(stance.view.pose_ticks));
+            printf("\x1b[18;1H %3lu polys  %3lu KB textures", (unsigned long)stance.model.polygon_count,
+                   (unsigned long)(stance.view.texture_bytes / 1024));
         }
-        printf("\x1b[18;1Hcpu   %3d%%", lines_since_vblank() * 100 / LINES_PER_FRAME);
+        printf("\x1b[20;1Hcpu   %3d%%", lines_since_vblank() * 100 / LINES_PER_FRAME);
         frame++;
     }
 }

@@ -58,10 +58,7 @@ from sources import Recorder
 # (.vh), 73 + 4s (.arc).
 FORCE_ENEMY_SLOTS = list(character.FORCE_ENEMY_SLOTS)
 COSTUME_SLOTS = [s for s in range(52) if s not in FORCE_ENEMY_SLOTS]
-CHARACTERS = [
-    # name, costume slot, .kmd BNS id, .arc BNS id
-    (f"costume_{slot:02d}", slot, 71 + 4 * slot, 73 + 4 * slot) for slot in range(52)
-]
+CHARACTERS = character.COSTUMES
 COMMON_BANK = motion_bake.COMMON_BANK
 MOTION_BANKS = motion_bake.BANKS
 STAGE_LETTERS = "abcdefgnijklmtu"      # fight stages 0–14 (stages.md#stage-numbers-and-resources)

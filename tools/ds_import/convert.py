@@ -23,6 +23,7 @@ sys.path.insert(1, str(ROOT / "tools" / "remake_import"))
 
 import characters  # noqa: E402
 import common  # noqa: E402  (puts tools/research on the import path too)
+import models  # noqa: E402
 import motion_banks  # noqa: E402
 import pose_tables  # noqa: E402
 import rigs  # noqa: E402
@@ -32,7 +33,7 @@ DEFAULT_IMPORTED = ROOT / "remake" / "imported"
 DEFAULT_OUT = ROOT / "ds" / "nitrofs"
 # What the DS build uses so far (D1: one fighter): from the converted tree, and from the disc.
 MODULES = [pose_tables, rigs, characters]
-DISC_MODULES = [motion_banks, spline_tables]
+DISC_MODULES = [motion_banks, spline_tables, models]
 
 log = logging.getLogger("ds_import")
 

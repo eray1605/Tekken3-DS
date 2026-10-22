@@ -12,7 +12,9 @@ OUT="$ROOT/ds/build/host"
 CC=${CC:-cc}
 mkdir -p "$OUT"
 
-SOURCES=$(find "$ROOT/ds/source/core" "$ROOT/ds/source/content" "$ROOT/ds/tests" -name '*.c' | sort)
+# presentation/fighter_mesh is plain C (the rest of presentation/ needs libnds).
+SOURCES=$(find "$ROOT/ds/source/core" "$ROOT/ds/source/content" "$ROOT/ds/tests" "$ROOT/ds/source/presentation" \
+    -name '*.c' ! -path '*/presentation/*' -o -name 'fighter_mesh*.c' | sort)
 # shellcheck disable=SC2086
 "$CC" -std=gnu17 -O2 -g -Wall -Wextra -Werror -fsanitize=undefined -fno-sanitize-recover=undefined \
     -I"$ROOT/ds/source" -I"$ROOT/ds/tests" $SOURCES -o "$OUT/t3ds_tests"
@@ -32,7 +34,7 @@ done
 DATA="$OUT/data"
 MANIFEST="$ROOT/remake/imported/manifest.json"
 if [ -f "$MANIFEST" ]; then
-    for source in remake/imported/manifest.json tools/ds/data_cases.py tools/ds/core_cases.py \
+    for source in remake/imported/manifest.json ds/nitrofs/models/costume_00.bin tools/ds/data_cases.py tools/ds/core_cases.py \
             tools/ds_import/rigs.py tools/research/pose.py tools/research/fight_sim.py; do
         if [ ! -f "$DATA/skeleton_costume_06.bin" ] || [ "$ROOT/$source" -nt "$DATA/skeleton_costume_06.bin" ]; then
             python3 "$ROOT/tools/ds/data_cases.py" "$DATA"

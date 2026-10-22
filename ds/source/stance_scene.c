@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "content/model_file.h"
 #include "content/pose_tables_file.h"
 #include "content/rig_file.h"
 #include "content/spline_file.h"
@@ -80,6 +81,9 @@ bool stance_scene_init(StanceScene *scene, int key)
     scene->error = NULL;
     scene->bank_type = -1;
     scene->own_data = NULL;
+    scene->model_data = NULL;
+    scene->view.model = NULL;
+    scene->show_skeleton = false;
     scene->orbit = GAME_TURN / 8;
     size_t size = 0;
     uint8_t *data = load(scene, POSE_TABLES_FILE, &size);
@@ -136,6 +140,16 @@ bool stance_scene_load_key(StanceScene *scene, int key)
         scene->error = path;
         return false;
     }
+    fighter_view_release(&scene->view);
+    free(scene->model_data);
+    snprintf(path, sizeof(path), MODEL_FILE_FORMAT, entry->costume_slot);
+    scene->model_data = load(scene, path, &size);
+    if (!scene->model_data)
+        return false;
+    if (!model_parse(scene->model_data, size, &scene->model) || !fighter_view_init(&scene->view, &scene->model)) {
+        scene->error = path;
+        return false;
+    }
     scene->key = key;
     scene->set = (MotionSet){&scene->own, &scene->common};
     fighter_skeleton_init(&scene->skeleton, &scene->tables, &scene->rig);
@@ -175,6 +189,8 @@ void stance_scene_step(StanceScene *scene, uint16_t held, uint16_t pressed)
         play_next_slot(scene, -1);
     if (pressed & PAD_START)
         play_slot(scene, STANCE_SLOT);
+    if (pressed & PAD_SELECT)
+        scene->show_skeleton = !scene->show_skeleton;
 
     // The core's share: sample the frame, pose the skeleton in place.
     static const Vec3 ANCHOR = {{0, 0, 0}};
@@ -193,6 +209,7 @@ void stance_scene_step(StanceScene *scene, uint16_t held, uint16_t pressed)
 
 static void draw_floor(void)
 {
+    glBindTexture(0, 0);
     glPolyFmt(POLY_ALPHA(31) | POLY_CULL_NONE);
     glBegin(GL_QUADS);
     for (int z = -FLOOR_TILES / 2; z < FLOOR_TILES / 2; z++) {
@@ -210,7 +227,7 @@ static void draw_floor(void)
     glEnd();
 }
 
-void stance_scene_draw(const StanceScene *scene)
+void stance_scene_draw(StanceScene *scene)
 {
     int orbit = ds_angle(scene->orbit);
     glMatrixMode(GL_MODELVIEW);
@@ -219,5 +236,10 @@ void stance_scene_draw(const StanceScene *scene)
                  0, floattof32(0.45), 0, 0, inttof32(1), 0);
     glScalef32(WORLD_SCALE, -WORLD_SCALE, WORLD_SCALE);   // game units, y down
     draw_floor();
-    skeleton_view_draw(&scene->skeleton);
+    cpuStartTiming(TIMER);
+    if (scene->show_skeleton || !scene->view.model)
+        skeleton_view_draw(&scene->skeleton);
+    else
+        fighter_view_draw(&scene->view, &scene->skeleton);
+    scene->draw_us = timerTicks2usec(cpuEndTiming());
 }
