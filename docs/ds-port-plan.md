@@ -27,7 +27,7 @@ Date of the decisions: 2026-10-22.
 | Language | C (GNU C17, GCC 13 and later). No C++: the fallback toolchain's libstdc++ is built for newlib. | Small runtime, predictable code size and speed on a 67 MHz ARM9. |
 | Simulation | `remake/core` ported to C module by module, integers only, same names and same step order. The port is written from the GDScript (which is written from the documented rules), not from the decompiled code. | One behaviour, two implementations, the same traces. |
 | Verification | The C core also builds for the host (Linux/macOS `cc`) and replays the golden traces (`work/traces/`) field by field, like the remake's suites. ROM smoke tests run in DeSmuME (`tools/ds/screenshot.sh`). | Tests run in seconds on the host; the emulator proves the ROM boots and draws. |
-| Assets | A DS converter (`tools/ds_import/`, D1) reads the remake's converted tree (`remake/imported/`) and writes DS formats into `ds/nitrofs/`, which the ROM build packs into NitroFS. Never committed. | The disc code stays in one place (`tools/remake_import/`); the DS step only re-encodes documented formats. |
+| Assets | A DS converter (`tools/ds_import/`, D1) reads the remake's converted tree (`remake/imported/`) and, for raw data the remake bakes away (motion banks, spline tables), the disc through `tools/remake_import/common.Disc`; it writes DS formats into `ds/nitrofs/`, which the ROM build packs into NitroFS. Never committed. | The disc code stays in one place (`tools/remake_import/`); the DS step only re-encodes documented formats. |
 | Original bugs | As in the remake: gameplay bugs reproduced, fixed together by the Gameplay-fixes option; `RuleSet` flags carried over. | Same game. |
 
 ## Hardware budget
@@ -63,7 +63,7 @@ ds/
   tests/           host tests of core and content (C)
   nitrofs/         converted data (git-ignored)
 tools/ds/          setup_toolchain.sh, screenshot.sh, run_tests.sh, core_cases.py
-tools/ds_import/   the DS converter: remake/imported → ds/nitrofs
+tools/ds_import/   the DS converter: remake/imported and the disc → ds/nitrofs
 ```
 
 Layers and dependencies as in the remake: `core` → nothing but C; `content` → `core`; `presentation` → both; `platform` and `main.c` wire them. Output leaves the simulation only as per-frame events.
@@ -93,13 +93,12 @@ Input: the game's pad word (PsyQ layout, `remake/platform/pad_state.gd`) from th
 - Motion sampling at run time (`anim_stream`, `motion_bank`): the DS keeps the banks' compressed streams instead of the remake's baked poses (98 bytes per frame would not fit 4 MB). Tested against `tools/research/motion.py` (bit-exact with AnimDecodePose) on 300 random streams, 9,522 frames, with random spline tables; slot lookup through the common bank on a bank built in the test.
 - `FighterSkeleton` (pose → root → 22 joints; attachments rigid, their dynamics TODO) against `pose.py` and `fight_sim.root_rotation` with a random rig, 400 frames on one skeleton.
 - `PoseSolver` passes the pose traces bit for bit with the converted tables (`pose_divmot00`, `pose_divmot99`: 393 animations, 21,278 frames; converted from the USA disc). The traces come from `export_traces.py`, from the `work/` tree or, with `--image` (`make traces-ds DS_IMAGE=…`), from one disc of any supported release rebased onto Japan Rev.1's layout; without them the test is skipped.
-- `tools/ds_import/` writes `tables/pose.bin` from `remake/imported/tables/pose.json`.
+- `tools/ds_import/` (`make convert-ds DS_IMAGE=…`, unittests with a stub disc in `make test-ds`) writes `tables/pose.bin` from `remake/imported/tables/pose.json`, each costume's rig `rigs/costume_NN.bin` from its `model.json` (joint offsets x, y, −z, parents, scale), and from the disc the 22 motion banks as they are (`motion/divmotNN.bin`, 6.2 MB in NitroFS; a fight holds two own banks and the common one) and the spline tables (`tables/spline.bin`, EXE 0x80096B00…0x80097160).
 - On the DS (DeSmuME), one pose build costs about 0.28 ms in ARM mode (0.9 ms in Thumb): two fighters about 3.4 % of a frame. DeSmuME's timing is approximate; real hardware to be measured.
 
 Open (needs a converted disc: Japan Rev.1, Japan or USA; the European release is not supported):
 
-- `tools/ds_import/`: one character's model (parts, seams, textures as 4/8 bpp) and motion banks into `ds/nitrofs/`; size report against the RAM and VRAM budgets. The ROM packs `ds/nitrofs/` (NitroFS) and loads the tables from it.
-- The DS converter's raw inputs from the disc: the motion banks and the spline tables (`--image`, via `tools/remake_import/common.Disc`), and each costume's rig from `model.json`.
+- `tools/ds_import/`: one character's model (parts, seams, textures as 4/8 bpp) into `ds/nitrofs/`; size report against the RAM and VRAM budgets. The ROM packs `ds/nitrofs/` (NitroFS) and loads the tables, banks and rigs from it.
 - Costume attachments' dynamics (`AttachmentDynamics`).
 - The fighter in its stance on the DS, animated by the C core, at 60 Hz with its CPU time shown.
 

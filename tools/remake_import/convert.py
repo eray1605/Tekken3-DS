@@ -62,13 +62,8 @@ CHARACTERS = [
     # name, costume slot, .kmd BNS id, .arc BNS id
     (f"costume_{slot:02d}", slot, 71 + 4 * slot, 73 + 4 * slot) for slot in range(52)
 ]
-COMMON_BANK = "divmot99"
-MOTION_BANKS = [
-    # name, BNS id: types 0–20 (BNS 280–300; type 15 has no copy there, BNS 194 is the first)
-    # and the common bank
-    *[(f"divmot{t:02d}", 194 if t == 15 else 280 + t) for t in range(21)],
-    ("divmot99", 279),
-]
+COMMON_BANK = motion_bake.COMMON_BANK
+MOTION_BANKS = motion_bake.BANKS
 STAGE_LETTERS = "abcdefgnijklmtu"      # fight stages 0–14 (stages.md#stage-numbers-and-resources)
 STAGES = [
     # stage number, letter, .arc BNS id, .tmd BNS id

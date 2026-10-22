@@ -37,6 +37,12 @@ import camera_scripts
 import motion
 
 COMMON_BANK = "divmot99"
+BANKS = [
+    # name, BNS id: types 0–20 (BNS 280–300; type 15 has no copy there, BNS 194 is the first)
+    # and the common bank
+    *[(f"divmot{t:02d}", 194 if t == 15 else 280 + t) for t in range(21)],
+    (COMMON_BANK, 279),
+]
 CHOICE_BYTES = 8
 BRANCH_SECTION, SOUND_SECTION, EMPTY_SECTION = 0, 3, 5
 EVENT_SECTION, CHOICE_SECTION, STREAM_SECTION, ATTACK_SECTION = 4, 7, 8, 9

@@ -61,12 +61,12 @@ help:
 	@echo "  make clean-export     remove the builds"
 	@echo "Nintendo DS (docs/ds-port-plan.md):"
 	@echo "  make setup-ds         install the DS toolchain without the Wonderful toolchain (apt, sources)"
-	@echo "  make convert-ds       remake/imported → ds/nitrofs (the DS data; make convert first)"
+	@echo "  make convert-ds       remake/imported and the disc → ds/nitrofs (make convert first; DS_IMAGE=\"<disc>.cue\")"
 	@echo "  make traces-ds        the pose traces from one disc, without the work/ tree (DS_IMAGE=\"<disc>.cue\")"
 	@echo "  make nds              build $(NDS_ROM)"
 	@echo "  make run-nds          run it in an emulator (NDS_EMU=$(notdir $(NDS_EMU)))"
 	@echo "  make nds-screenshot   run it headless in DeSmuME and save ds/build/screenshot.png"
-	@echo "  make test-ds          the DS core's tests on the host (seconds; traces when converted)"
+	@echo "  make test-ds          the DS converter's and the DS core's tests on the host (seconds; traces when converted)"
 	@echo "  make clean-nds        remove the DS build"
 
 convert:
@@ -132,7 +132,8 @@ setup-ds:
 	tools/ds/setup_toolchain.sh
 
 convert-ds:
-	$(PYTHON) tools/ds_import/convert.py
+	@[ -n "$(DS_IMAGE)" ] || { echo 'DS_IMAGE="<disc>.cue" is required'; exit 1; }
+	$(PYTHON) tools/ds_import/convert.py --image "$(DS_IMAGE)"
 
 traces-ds:
 	@[ -n "$(DS_IMAGE)" ] || { echo 'DS_IMAGE="<disc>.cue" is required'; exit 1; }
@@ -149,6 +150,7 @@ nds-screenshot: nds
 	@echo "ds/build/screenshot.png"
 
 test-ds:
+	$(PYTHON) -m unittest discover -s tools/ds_import/tests -t tools/ds_import
 	tools/ds/run_tests.sh
 
 clean-nds:
