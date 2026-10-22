@@ -26,13 +26,15 @@ PORT ?= 8060
 NDS_ROM := ds/tekken3.nds
 NDS_EMU ?= $(shell command -v melonDS || command -v desmume-cli || command -v /usr/games/desmume-cli || echo melonDS)
 NDS_SECONDS ?= 4
+# The disc image (any supported release) the DS converter and the pose traces read raw data from.
+DS_IMAGE ?=
 
 export GODOT
 
 .DEFAULT_GOAL := help
 .PHONY: help convert convert-nomovies convert-lite import run test test-quick test-converter traces layouts export export-full export-nomovies export-lite \
 	$(addprefix export-,$(PLATFORMS)) $(foreach p,$(PLATFORMS),export-$(p)-full export-$(p)-nomovies export-$(p)-lite) \
-	serve-web clean-export setup-ds convert-ds nds run-nds nds-screenshot test-ds clean-nds
+	serve-web clean-export setup-ds convert-ds traces-ds nds run-nds nds-screenshot test-ds clean-nds
 
 help:
 	@echo "Setup:"
@@ -60,6 +62,7 @@ help:
 	@echo "Nintendo DS (docs/ds-port-plan.md):"
 	@echo "  make setup-ds         install the DS toolchain without the Wonderful toolchain (apt, sources)"
 	@echo "  make convert-ds       remake/imported → ds/nitrofs (the DS data; make convert first)"
+	@echo "  make traces-ds        the pose traces from one disc, without the work/ tree (DS_IMAGE=\"<disc>.cue\")"
 	@echo "  make nds              build $(NDS_ROM)"
 	@echo "  make run-nds          run it in an emulator (NDS_EMU=$(notdir $(NDS_EMU)))"
 	@echo "  make nds-screenshot   run it headless in DeSmuME and save ds/build/screenshot.png"
@@ -130,6 +133,10 @@ setup-ds:
 
 convert-ds:
 	$(PYTHON) tools/ds_import/convert.py
+
+traces-ds:
+	@[ -n "$(DS_IMAGE)" ] || { echo 'DS_IMAGE="<disc>.cue" is required'; exit 1; }
+	$(PYTHON) tools/research/export_traces.py --image "$(DS_IMAGE)"
 
 nds:
 	$(MAKE) -C ds
