@@ -4,10 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Two linked projects:
+Three linked projects:
 
 1. **Research into Tekken 3 (PlayStation)** — `docs/research/` documents every format and all game logic; `tools/research/` holds verified Python ports of the game's routines and the harnesses that prove them against the original code.
 2. **A remake in Godot 4.7 (typed GDScript only)** — `remake/`, planned in `docs/remake-plan.md` (milestones M0–M5, architecture, decisions, bug policy). Gameplay must match the original frame for frame; visuals may be modernised.
+3. **A Nintendo DS port (C, BlocksDS)** — `ds/`, planned in `docs/ds-port-plan.md` (milestones D0–D5). The remake's `core` ported to C and proven by the same golden traces; never built from the decompiled code.
 
 Japan Rev.1 is the baseline: every address in the code and docs is its own. The game can be converted from any one release (Japan Rev.1, the original Japanese SLPS-01300, or USA): the others' executable and overlays are rebased onto Rev.1's layout first. A USA disc next to a Japanese one adds the English texts (one unified interface: Japan's structure, USA wording where it exists).
 
@@ -24,6 +25,10 @@ make test-quick         # without trace comparisons (suites with `const SLOW := 
 make test-converter     # the converter's unittest suite (synthetic images, no game data)
 make export-web-lite    # one build; export-<macos|windows|linux|web|android|ios>[-full|-nomovies|-lite], export = all
 make serve-web          # serve remake/export/web-<WEB> on :8060
+make setup-ds           # DS toolchain without Wonderful (tools/ds/setup_toolchain.sh: apt GCC + picolibc + BlocksDS v1.16.0)
+make nds                # ds/tekken3.nds (make -C ds); run-nds, nds-screenshot (headless DeSmuME), clean-nds
+make convert-ds         # remake/imported → ds/nitrofs (tools/ds_import/convert.py)
+make test-ds            # DS core host tests (tools/ds/run_tests.sh [filter]; cc + UBSan, synthetic pose cases from the Python port, traces when converted)
 ```
 
 - Single test or suite: `tools/remake/run_tests.sh <substring>` matches suite file or test names (e.g. `run_tests.sh menu_exit`, `run_tests.sh test_settings`); a filtered run uses one runner.
@@ -35,7 +40,7 @@ GDScript warnings for untyped declarations and unsafe access/calls are errors (`
 
 ## Game data never enters git
 
-Converted assets (`remake/imported/`), the extraction tree and decompiled code (`work/`), traces (`work/traces/`), builds (`remake/export/`) and texture-pack dumps contain Namco data: they are git-ignored and must never be committed or published. The repository may only hold the project's own code, docs and generic interface wording (e.g. `remake/content/texts_en.json`, `remake/app/translations.csv`). Names, credits, move lists, pictures and anything else creative come from the discs through the converter only.
+Converted assets (`remake/imported/`, `ds/nitrofs/`), DS ROMs (`*.nds`), the extraction tree and decompiled code (`work/`), traces (`work/traces/`), builds (`remake/export/`) and texture-pack dumps contain Namco data: they are git-ignored and must never be committed or published. The repository may only hold the project's own code, docs and generic interface wording (e.g. `remake/content/texts_en.json`, `remake/app/translations.csv`). Names, credits, move lists, pictures and anything else creative come from the discs through the converter only.
 
 ## Remake architecture (`remake/`)
 

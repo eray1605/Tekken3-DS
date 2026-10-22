@@ -86,6 +86,10 @@ CLUT_ORIGIN_Y = 504                 # player 1: CLUT row offset
 FORCE_ENEMY_SETS = 4                # Tekken Force's enemies: texture sets in one archive
 FORCE_ENEMY_FIRST_SLOT = 47         # their costume slots, one per set (the set number is slot − 47)
 FORCE_ENEMY_SLOTS = range(FORCE_ENEMY_FIRST_SLOT, FORCE_ENEMY_FIRST_SLOT + FORCE_ENEMY_SETS)
+COSTUMES = [
+    # name, costume slot, .kmd BNS id, .arc BNS id
+    (f"costume_{slot:02d}", slot, 71 + 4 * slot, 73 + 4 * slot) for slot in range(52)
+]
 ENEMY_SET_STEP = 16                 # VRAM words between them
 EIGHT_BIT = 0x80
 VERTEX_FLOATS = 28

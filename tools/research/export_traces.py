@@ -51,6 +51,11 @@ The Tekken Force pick-up's golden colours (`force_back_colour.json`) come from
 
     python3 tools/research/export_traces.py [--banks divmot00 divmot99] [--enbu 0 1 2]
         [--attachments N] [--gon-eyes N] [--no-back-colour]
+    python3 tools/research/export_traces.py --image <disc>.cue [--banks ...]
+
+With `--image`, the pose traces are read from one disc of any supported release
+(tools/remake_import/common.Disc, rebased onto Japan Rev.1's layout) instead of the `work/` tree,
+and only they are written: the other traces run the game's code from `work/` in the harness.
 """
 
 from __future__ import annotations
@@ -58,6 +63,7 @@ from __future__ import annotations
 import argparse
 import logging
 import struct
+import sys
 from pathlib import Path
 
 import motion
@@ -81,8 +87,7 @@ def own_anims(bank: motion.MotionBank) -> list[int]:
     return sorted({bank.move_row(r)[0] for r in range(bank.move_count) if bank.move_row(r)[0] < motion.COMMON_FLAG})
 
 
-def pose_trace(name: str, exe: bytes) -> bytes:
-    data = (BNS_DIR / f"{BANK_IDS[name]:03d}_{name}.bin").read_bytes()
+def pose_trace(name: str, exe: bytes, data: bytes) -> bytes:
     bank = motion.parse_bank(data)
     spline = motion.SplineTables(exe)
     tab = pose.ExeTables(exe)
@@ -153,6 +158,8 @@ def enbu_trace(demo: int) -> bytes:
 def main() -> int:
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--image", type=Path, default=None,
+                        help="read the pose traces' banks and tables from this disc image (pose traces only)")
     parser.add_argument("--banks", nargs="*", default=list(BANK_IDS))
     parser.add_argument("--enbu", nargs="*", type=int, default=[0, 1, 2])
     parser.add_argument("--gon-eyes", type=int, default=2000, help="Gon's eye direction cases (0: none)")
@@ -163,10 +170,18 @@ def main() -> int:
                         help="fight scenarios of fight_harness.SCENARIOS (no names: all)")
     parser.add_argument("--jobs", type=int, default=8, help="fight scenarios run in parallel")
     args = parser.parse_args()
-    exe = motion.load_exe()
     OUT_DIR.mkdir(parents=True, exist_ok=True)
+    if args.image is not None:
+        sys.path.insert(0, str(ROOT / "tools" / "remake_import"))
+        import common   # noqa: PLC0415
+        disc = common.Disc.open(args.image).canonical()
+        for name in args.banks:
+            (OUT_DIR / f"pose_{name}.bin").write_bytes(pose_trace(name, disc.exe, disc.bns(BANK_IDS[name])))
+        return 0
+    exe = motion.load_exe()
     for name in args.banks:
-        (OUT_DIR / f"pose_{name}.bin").write_bytes(pose_trace(name, exe))
+        data = (BNS_DIR / f"{BANK_IDS[name]:03d}_{name}.bin").read_bytes()
+        (OUT_DIR / f"pose_{name}.bin").write_bytes(pose_trace(name, exe, data))
     for demo in args.enbu:
         (OUT_DIR / f"enbu_{demo}.bin").write_bytes(enbu_trace(demo))
     if args.attachments:

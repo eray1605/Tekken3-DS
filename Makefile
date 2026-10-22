@@ -22,13 +22,19 @@ LAYOUT_ARGS ?=
 # The web build `serve-web` serves (full, nomovies or lite) and its port.
 WEB ?= lite
 PORT ?= 8060
+# The DS build (docs/ds-port-plan.md): its emulator for `run-nds` and the seconds before `nds-screenshot` grabs.
+NDS_ROM := ds/tekken3.nds
+NDS_EMU ?= $(shell command -v melonDS || command -v desmume-cli || command -v /usr/games/desmume-cli || echo melonDS)
+NDS_SECONDS ?= 4
+# The disc image (any supported release) the DS converter and the pose traces read raw data from.
+DS_IMAGE ?=
 
 export GODOT
 
 .DEFAULT_GOAL := help
 .PHONY: help convert convert-nomovies convert-lite import run test test-quick test-converter traces layouts export export-full export-nomovies export-lite \
 	$(addprefix export-,$(PLATFORMS)) $(foreach p,$(PLATFORMS),export-$(p)-full export-$(p)-nomovies export-$(p)-lite) \
-	serve-web clean-export
+	serve-web clean-export setup-ds convert-ds traces-ds nds run-nds nds-screenshot test-ds clean-nds
 
 help:
 	@echo "Setup:"
@@ -53,6 +59,15 @@ help:
 	@echo "  make export-<p>-<full|nomovies|lite>  one build, e.g. export-web-nomovies"
 	@echo "  make serve-web        serve the web build on http://localhost:$(PORT) (WEB=full|nomovies|lite)"
 	@echo "  make clean-export     remove the builds"
+	@echo "Nintendo DS (docs/ds-port-plan.md):"
+	@echo "  make setup-ds         install the DS toolchain without the Wonderful toolchain (apt, sources)"
+	@echo "  make convert-ds       remake/imported and the disc → ds/nitrofs (make convert first; DS_IMAGE=\"<disc>.cue\")"
+	@echo "  make traces-ds        the pose traces from one disc, without the work/ tree (DS_IMAGE=\"<disc>.cue\")"
+	@echo "  make nds              build $(NDS_ROM)"
+	@echo "  make run-nds          run it in an emulator (NDS_EMU=$(notdir $(NDS_EMU)))"
+	@echo "  make nds-screenshot   run it headless in DeSmuME and save ds/build/screenshot.png"
+	@echo "  make test-ds          the DS converter's and the DS core's tests on the host (seconds; traces when converted)"
+	@echo "  make clean-nds        remove the DS build"
 
 convert:
 	$(PYTHON) tools/remake_import/convert.py $(CONVERT_ARGS)
@@ -112,3 +127,31 @@ serve-web:
 
 clean-export:
 	find $(EXPORT_DIR) -mindepth 1 -maxdepth 1 ! -name .gdignore -exec rm -rf {} +
+
+setup-ds:
+	tools/ds/setup_toolchain.sh
+
+convert-ds:
+	@[ -n "$(DS_IMAGE)" ] || { echo 'DS_IMAGE="<disc>.cue" is required'; exit 1; }
+	$(PYTHON) tools/ds_import/convert.py --image "$(DS_IMAGE)"
+
+traces-ds:
+	@[ -n "$(DS_IMAGE)" ] || { echo 'DS_IMAGE="<disc>.cue" is required'; exit 1; }
+	$(PYTHON) tools/research/export_traces.py --image "$(DS_IMAGE)"
+
+nds:
+	$(MAKE) -C ds
+
+run-nds: nds
+	"$(NDS_EMU)" $(NDS_ROM)
+
+nds-screenshot: nds
+	tools/ds/screenshot.sh $(NDS_ROM) ds/build/screenshot.png $(NDS_SECONDS)
+	@echo "ds/build/screenshot.png"
+
+test-ds:
+	$(PYTHON) -m unittest discover -s tools/ds_import/tests -t tools/ds_import
+	tools/ds/run_tests.sh
+
+clean-nds:
+	$(MAKE) -C ds clean
