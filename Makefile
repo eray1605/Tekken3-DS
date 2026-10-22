@@ -22,13 +22,17 @@ LAYOUT_ARGS ?=
 # The web build `serve-web` serves (full, nomovies or lite) and its port.
 WEB ?= lite
 PORT ?= 8060
+# The DS build (docs/ds-port-plan.md): its emulator for `run-nds` and the seconds before `nds-screenshot` grabs.
+NDS_ROM := ds/tekken3.nds
+NDS_EMU ?= $(shell command -v melonDS || command -v desmume-cli || command -v /usr/games/desmume-cli || echo melonDS)
+NDS_SECONDS ?= 4
 
 export GODOT
 
 .DEFAULT_GOAL := help
 .PHONY: help convert convert-nomovies convert-lite import run test test-quick test-converter traces layouts export export-full export-nomovies export-lite \
 	$(addprefix export-,$(PLATFORMS)) $(foreach p,$(PLATFORMS),export-$(p)-full export-$(p)-nomovies export-$(p)-lite) \
-	serve-web clean-export
+	serve-web clean-export setup-ds nds run-nds nds-screenshot clean-nds
 
 help:
 	@echo "Setup:"
@@ -53,6 +57,12 @@ help:
 	@echo "  make export-<p>-<full|nomovies|lite>  one build, e.g. export-web-nomovies"
 	@echo "  make serve-web        serve the web build on http://localhost:$(PORT) (WEB=full|nomovies|lite)"
 	@echo "  make clean-export     remove the builds"
+	@echo "Nintendo DS (docs/ds-port-plan.md):"
+	@echo "  make setup-ds         install the DS toolchain without the Wonderful toolchain (apt, sources)"
+	@echo "  make nds              build $(NDS_ROM)"
+	@echo "  make run-nds          run it in an emulator (NDS_EMU=$(notdir $(NDS_EMU)))"
+	@echo "  make nds-screenshot   run it headless in DeSmuME and save ds/build/screenshot.png"
+	@echo "  make clean-nds        remove the DS build"
 
 convert:
 	$(PYTHON) tools/remake_import/convert.py $(CONVERT_ARGS)
@@ -112,3 +122,19 @@ serve-web:
 
 clean-export:
 	find $(EXPORT_DIR) -mindepth 1 -maxdepth 1 ! -name .gdignore -exec rm -rf {} +
+
+setup-ds:
+	tools/ds/setup_toolchain.sh
+
+nds:
+	$(MAKE) -C ds
+
+run-nds: nds
+	"$(NDS_EMU)" $(NDS_ROM)
+
+nds-screenshot: nds
+	tools/ds/screenshot.sh $(NDS_ROM) ds/build/screenshot.png $(NDS_SECONDS)
+	@echo "ds/build/screenshot.png"
+
+clean-nds:
+	$(MAKE) -C ds clean

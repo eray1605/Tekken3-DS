@@ -31,3 +31,9 @@ __pycache__/
 .scratch/
 
 .DS_Store
+
+# Nintendo DS build (ds/): builds and converted data, never commit
+/ds/build/
+/ds/nitrofs/
+*.nds
+*.elf
