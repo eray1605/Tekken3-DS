@@ -11,6 +11,7 @@ typedef struct {
     const char *cases_dir;  // synthetic cases (tools/ds/core_cases.py)
     const char *nitrofs;    // converted DS data (tools/ds_import/convert.py)
     const char *traces;     // golden traces (work/traces)
+    const char *data_dir;   // cases from the converted game data (tools/ds/data_cases.py)
 } TestPaths;
 
 extern TestPaths test_paths;

@@ -1,10 +1,13 @@
 // Animation sampling against the verified Python port (tools/research/motion.py) on random streams
-// and spline tables (tools/ds/core_cases.py), and the motion banks' slot lookup on a small bank
-// built here (remake/content/motion_set.gd's rules).
+// and spline tables (tools/ds/core_cases.py) and, when the game is converted, every stream of the
+// banks against the remake's baked poses (tools/ds/data_cases.py); the motion banks' slot lookup
+// on a small bank built here (remake/content/motion_set.gd's rules).
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "content/bytes.h"
+#include "content/spline_file.h"
 #include "core/fighter/anim_stream.h"
 #include "core/fighter/motion_bank.h"
 #include "test.h"
@@ -140,4 +143,100 @@ void test_motion_set_resolves_slots(void)
     EXPECT(!motion_bank_parse(own_data, own_size, &own), "a first byte other than zero");
     own_data[0] = 0;
     EXPECT(!motion_bank_parse(own_data, own_size - 1, &own), "a directory that does not end at the size");
+}
+
+void test_spline_file_rejects_bad_input(void)
+{
+    static uint8_t data[8 + SPLINE_TABLE_BYTES];
+    memcpy(data, "T3SL\1\0\0\0", 8);
+    SplineTables tables = {NULL};
+    EXPECT(spline_tables_parse(data, sizeof(data), &tables), "the right size");
+    EXPECT(tables.data == data + 8, "the tables in place");
+    EXPECT(!spline_tables_parse(data, sizeof(data) - 1, &tables), "a short file");
+    data[0] = 'X';
+    EXPECT(!spline_tables_parse(data, sizeof(data), &tables), "another magic");
+    data[0] = 'T';
+    data[4] = 2;
+    EXPECT(!spline_tables_parse(data, sizeof(data), &tables), "another version");
+}
+
+// Every stream a bank's baked poses hold (motion_<bank>.bin), sampled from the converted bank.
+static void compare_bank_with_baked(const char *bank_name, const SplineTables *tables, long *frames_total)
+{
+    char name[64];
+    snprintf(name, sizeof(name), "motion/%s.bin", bank_name);
+    size_t bank_size = 0;
+    uint8_t *bank_data = test_read_file(test_paths.nitrofs, name, &bank_size);
+    snprintf(name, sizeof(name), "motion_%s.bin", bank_name);
+    size_t size = 0;
+    uint8_t *data = test_read_file(test_paths.data_dir, name, &size);
+    MotionBank bank;
+    EXPECT(bank_data && motion_bank_parse(bank_data, bank_size, &bank), "%s: no converted bank", bank_name);
+    EXPECT(data && memcmp(data, "T3MB", 4) == 0, "%s: no baked poses", bank_name);
+    if (!bank_data || !data || memcmp(data, "T3MB", 4) != 0 || !motion_bank_parse(bank_data, bank_size, &bank)) {
+        free(bank_data);
+        free(data);
+        return;
+    }
+    ByteReader r = {data, size, 4};
+    EXPECT_EQ(byte_reader_u32(&r), 1);
+    uint32_t anims = byte_reader_u32(&r);
+    ByteReader poses = {data, size, r.pos + 8 * (size_t)anims};
+    long mismatches = 0;
+    for (uint32_t a = 0; a < anims && poses.pos < size; a++) {
+        uint32_t offset = byte_reader_u32(&r);
+        uint32_t frames = byte_reader_u32(&r);
+        AnimStream stream;
+        bool found = motion_bank_anim(&bank, offset, &stream);
+        EXPECT(found && stream.frames == (int)frames, "%s: stream 0x%X missing or not %u frames", bank_name,
+               (unsigned)offset, (unsigned)frames);
+        if (!found)
+            break;
+        for (uint32_t f = 0; f < frames; f++) {
+            int32_t pose[ANIM_CHANNELS];
+            anim_sample_pose(&stream, (int)f, tables, pose);
+            for (int c = 0; c < ANIM_CHANNELS; c++) {
+                int32_t want = byte_reader_s16(&poses);
+                if (pose[c] != want) {
+                    if (mismatches == 0)
+                        test_fail(__FILE__, __LINE__, "%s stream 0x%X frame %u channel %d: %d != %d", bank_name,
+                                  (unsigned)offset, (unsigned)f, c, (int)pose[c], (int)want);
+                    mismatches++;
+                }
+            }
+        }
+        *frames_total += frames;
+    }
+    EXPECT(poses.pos == size, "%s: %zu bytes of poses left", bank_name, size - poses.pos);
+    EXPECT(mismatches == 0, "%s: %ld mismatched values", bank_name, mismatches);
+    free(bank_data);
+    free(data);
+}
+
+void test_anim_sampling_matches_baked_poses(void)
+{
+    size_t size = 0;
+    uint8_t *file = test_read_file(test_paths.nitrofs, SPLINE_TABLES_FILE, &size);
+    if (!file) {
+        test_skip("no converted spline tables (make convert-ds)");
+        return;
+    }
+    SplineTables tables;
+    EXPECT(spline_tables_parse(file, size, &tables), "%s does not parse", SPLINE_TABLES_FILE);
+    uint8_t *probe = test_read_file(test_paths.data_dir, "motion_divmot99.bin", &size);
+    if (!probe) {
+        test_skip("no cases from the converted data (tools/ds/data_cases.py)");
+        free(file);
+        return;
+    }
+    free(probe);
+    long frames_total = 0;
+    for (int b = 0; b <= 21; b++) {
+        char bank[16];
+        snprintf(bank, sizeof(bank), "divmot%02d", b == 21 ? 99 : b);
+        compare_bank_with_baked(bank, &tables, &frames_total);
+    }
+    EXPECT(frames_total > 0, "no frames");
+    printf("    %ld frames\n", frames_total);
+    free(file);
 }

@@ -202,22 +202,34 @@ def random_rig(rng: random.Random) -> tuple[int, list[int], list[list[int]]]:
 
 
 def skeleton_cases(tables: dict, rng: random.Random, frames: int = 400) -> bytes:
-    exe = bytes(blank_exe(tables))
+    def inputs():
+        for _ in range(frames):
+            vec = random_pose(rng)
+            vec[:3] = [rng.randint(-3000, 3000) for _ in range(3)]
+            yield vec, *random_placement(rng)
+
+    return skeleton_case_file(bytes(blank_exe(tables)), random_rig(rng), frames, inputs())
+
+
+def random_placement(rng: random.Random) -> tuple[list[int], int, int]:
+    """An anchor, a facing and a heading for FighterSkeleton.update."""
+    anchor = [rng.randint(-20000, 20000), rng.randint(-2000, 2000), rng.randint(-20000, 20000)]
+    return anchor, rng.randint(0, 0xFFFF), rng.randint(0, 0xFFFF)
+
+
+def skeleton_case_file(exe: bytes, rig: tuple[int, list[int], list[list[int]]], frames: int, inputs) -> bytes:
+    """skeleton_cases.bin for a rig (scale, parents, offsets) and `frames` inputs (pose vector,
+    anchor, facing, heading), the pose tables in `exe` at their Rev.1 addresses."""
     tab = pose.ExeTables(exe)
     fight_sim._EXE = fight_math.Exe(exe)
-    scale, parents, offsets = random_rig(rng)
+    scale, parents, offsets = rig
     out = bytearray(b"T3SK" + struct.pack("<Ii", 1, scale))
     for m in range(ALL_JOINTS):
         out += struct.pack("<b3x3i", parents[m], *offsets[m])
     out += struct.pack("<I", frames)
     slots = [identity() for _ in range(SKELETON_JOINTS)]
     joints = [pose.Frame(pose.unflat(identity()), [0, 0, 0]) for _ in range(ALL_JOINTS)]
-    for _ in range(frames):
-        vec = random_pose(rng)
-        vec[:3] = [rng.randint(-3000, 3000) for _ in range(3)]
-        anchor = [rng.randint(-20000, 20000), rng.randint(-2000, 2000), rng.randint(-20000, 20000)]
-        facing = rng.randint(0, 0xFFFF)
-        heading = rng.randint(0, 0xFFFF)
+    for vec, anchor, facing, heading in inputs:
         out += struct.pack(f"<{CHANNELS}h3iii", *vec, *anchor, facing, heading)
         # FighterSkeleton.update: the pose, the root (RootUpdate on the ground), then the joints.
         pose.pose_build_matrices(vec, slots, tab)

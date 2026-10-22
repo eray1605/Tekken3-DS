@@ -56,13 +56,13 @@ ds/
                    RTPS, division), c_rand
       fighter/     pose_tables, joint_frame, pose_solver, anim_stream (sampling at run time),
                    motion_bank (banks read in place, MotionSet), fighter_skeleton
-    content/       loaders for the converted data (byte readers, tables/pose.bin)
+    content/       loaders for the converted data (byte readers, tables/pose.bin, tables/spline.bin, rigs/)
     dev/           measurements on the DS (pose_bench)
     presentation/  (D1+) 3D (fighters, stage, effects), 2D screens, HUD, sound
     platform/      (D1+) pads, save data, timing
   tests/           host tests of core and content (C)
   nitrofs/         converted data (git-ignored)
-tools/ds/          setup_toolchain.sh, screenshot.sh, run_tests.sh, core_cases.py
+tools/ds/          setup_toolchain.sh, screenshot.sh, run_tests.sh, core_cases.py, data_cases.py
 tools/ds_import/   the DS converter: remake/imported and the disc → ds/nitrofs
 ```
 
@@ -90,8 +90,8 @@ Input: the game's pad word (PsyQ layout, `remake/platform/pad_state.gd`) from th
 
 - `core/math` (fx, gte, c_rand) and the pose pipeline (`PoseTables`, `JointFrame`, `PoseSolver` with the Gameplay-fix flag `wide_elbow`) in C.
 - Host tests (`make test-ds`, seconds): the math helpers as in `test_fx.gd`, and `PoseSolver` against the verified Python port (`tools/research/pose.py`) on 2,400 frames of random poses with synthetic tables of the game's shape (`tools/ds/core_cases.py`), slots carried over as in the traces. Branches covered: all but the bend clamps (cos above ±1), which reachable lengths do not produce. The comparison catches single-constant changes (checked by mutating the solver).
-- Motion sampling at run time (`anim_stream`, `motion_bank`): the DS keeps the banks' compressed streams instead of the remake's baked poses (98 bytes per frame would not fit 4 MB). Tested against `tools/research/motion.py` (bit-exact with AnimDecodePose) on 300 random streams, 9,522 frames, with random spline tables; slot lookup through the common bank on a bank built in the test.
-- `FighterSkeleton` (pose → root → 22 joints; attachments rigid, their dynamics TODO) against `pose.py` and `fight_sim.root_rotation` with a random rig, 400 frames on one skeleton.
+- Motion sampling at run time (`anim_stream`, `motion_bank`): the DS keeps the banks' compressed streams instead of the remake's baked poses (98 bytes per frame would not fit 4 MB). Tested against `tools/research/motion.py` (bit-exact with AnimDecodePose) on 300 random streams, 9,522 frames, with random spline tables; slot lookup through the common bank on a bank built in the test. On the converted game, every stream of the 22 banks sampled from `ds/nitrofs/motion/` with the converted spline tables equals the remake's baked poses (`remake/imported/motion/*.poses.bin.gz`): 321,269 frames.
+- `FighterSkeleton` (pose → root → 22 joints; attachments rigid, their dynamics TODO) against `pose.py` and `fight_sim.root_rotation` with a random rig, 400 frames on one skeleton; on the converted game with three costumes' rigs (scales 45 %, 100 %, 106 %), the converted pose tables and 3,000 baked frames each, the rig files (`rigs/`) equal to the cases' rigs. The data cases come from `tools/ds/data_cases.py` (under `ds/build/`, game data), made by `make test-ds` when the game is converted.
 - `PoseSolver` passes the pose traces bit for bit with the converted tables (`pose_divmot00`, `pose_divmot99`: 393 animations, 21,278 frames; converted from the USA disc). The traces come from `export_traces.py`, from the `work/` tree or, with `--image` (`make traces-ds DS_IMAGE=…`), from one disc of any supported release rebased onto Japan Rev.1's layout; without them the test is skipped.
 - `tools/ds_import/` (`make convert-ds DS_IMAGE=…`, unittests with a stub disc in `make test-ds`) writes `tables/pose.bin` from `remake/imported/tables/pose.json`, each costume's rig `rigs/costume_NN.bin` from its `model.json` (joint offsets x, y, −z, parents, scale), and from the disc the 22 motion banks as they are (`motion/divmotNN.bin`, 6.2 MB in NitroFS; a fight holds two own banks and the common one) and the spline tables (`tables/spline.bin`, EXE 0x80096B00…0x80097160).
 - On the DS (DeSmuME), one pose build costs about 0.28 ms in ARM mode (0.9 ms in Thumb): two fighters about 3.4 % of a frame. DeSmuME's timing is approximate; real hardware to be measured.

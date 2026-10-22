@@ -1,5 +1,5 @@
 // tools/ds/run_tests.sh builds and runs this: t3ds_tests [--cases DIR] [--nitrofs DIR]
-// [--traces DIR] [filter]. A filter runs the tests whose name contains it.
+// [--traces DIR] [--data DIR] [filter]. A filter runs the tests whose name contains it.
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,8 +22,12 @@
     X(test_pose_solver_matches_traces)            \
     X(test_anim_sampling_matches_port_cases)      \
     X(test_anim_sampling_clamps_frames)           \
+    X(test_spline_file_rejects_bad_input)         \
+    X(test_anim_sampling_matches_baked_poses)     \
     X(test_motion_set_resolves_slots)             \
     X(test_fighter_skeleton_matches_port_cases)   \
+    X(test_rig_file_rejects_bad_input)            \
+    X(test_fighter_skeleton_matches_port_on_converted_data) \
     X(test_fighter_rotation_xyz_identity_and_quarter_turn)
 
 #define DECLARE(name) void name(void);
@@ -35,7 +39,7 @@ static const struct {
     void (*fn)(void);
 } ALL[] = {TESTS(ENTRY)};
 
-TestPaths test_paths = {"build/host", "nitrofs", "../work/traces"};
+TestPaths test_paths = {"build/host", "nitrofs", "../work/traces", "build/host/data"};
 
 static int failures;
 static bool skipped;
@@ -85,6 +89,8 @@ int main(int argc, char **argv)
             test_paths.nitrofs = argv[++i];
         else if (strcmp(argv[i], "--traces") == 0 && i + 1 < argc)
             test_paths.traces = argv[++i];
+        else if (strcmp(argv[i], "--data") == 0 && i + 1 < argc)
+            test_paths.data_dir = argv[++i];
         else
             filter = argv[i];
     }
