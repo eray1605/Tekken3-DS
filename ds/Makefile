@@ -12,6 +12,7 @@ GAME_SUBTITLE := Fan port, game data from your disc
 GAME_AUTHOR := github.com/eray1605/Tekken3-DS
 
 SOURCEDIRS := source
+INCLUDEDIRS := source
 DEFINES := -DT3DS_VERSION=\"$(shell git describe --always --dirty 2>/dev/null || echo dev)\"
 
 include $(BLOCKSDS)/sys/default_makefiles/rom_arm9/Makefile

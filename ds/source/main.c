@@ -1,13 +1,15 @@
-// Tekken 3 DS, milestone D0 (docs/ds-port-plan.md): boots, runs a 60 Hz loop over the game's pad word,
-// draws a 3D test picture on the top screen and a status console on the bottom one.
+// Tekken 3 DS (docs/ds-port-plan.md): boots, times the ported pose solver, runs a 60 Hz loop over the
+// game's pad word, draws a 3D test picture on the top screen and a status console on the bottom one.
 #include <nds.h>
 #include <stdio.h>
 
+#include "dev/pose_bench.h"
 #include "pad.h"
 #include "test_scene.h"
 
 #define LINES_PER_FRAME 263
 #define VBLANK_LINE 192
+#define BENCH_CALLS 600
 
 // Scanlines spent since the last vertical blank began: the frame's CPU budget used so far.
 static int lines_since_vblank(void)
@@ -27,10 +29,15 @@ int main(int argc, char **argv)
     test_scene_init_gl();
 
     printf("\x1b[1;1HTekken 3 DS\n");
-    printf(" milestone D0: bootstrap\n");
+    printf(" milestone D1: one fighter\n");
     printf(" build %s\n\n", T3DS_VERSION);
     printf(" Y X B A = Sqr Tri Crs Cir\n");
     printf(" Left/Right: turn the camera\n");
+
+    PoseBenchResult bench = pose_bench_run(BENCH_CALLS);
+    printf("\x1b[14;1Hpose solver, %lu calls:", (unsigned long)bench.calls);
+    printf("\x1b[15;1H mean %lu us  best %lu  worst %lu", (unsigned long)bench.mean_us,
+           (unsigned long)bench.best_us, (unsigned long)bench.worst_us);
 
     TestScene scene = {0, 0};
     uint32_t frame = 0;

@@ -195,12 +195,15 @@ Builds contain the converted game data. They are for your own devices only.
 ## Nintendo DS
 
 A port to the Nintendo DS is under way in `ds/` ([plan](docs/ds-port-plan.md)): the remake's
-simulation in C on [BlocksDS](https://blocksds.skylyrac.net). It is at its first step: the ROM
-boots and shows a 3D test picture, without game data yet.
+simulation in C on [BlocksDS](https://blocksds.skylyrac.net). So far the ROM boots and shows a 3D
+test picture, and the pose solver runs in C, tested against the research port; no game data is used
+yet.
 
 ```sh
 make setup-ds         # the toolchain from apt and sources (Debian/Ubuntu), or install BlocksDS's own way
+make convert-ds       # remake/imported → ds/nitrofs (after make convert)
 make nds              # ds/tekken3.nds
+make test-ds          # the DS core's tests on the host
 make run-nds          # in melonDS or DeSmuME (NDS_EMU=...)
 make nds-screenshot   # headless DeSmuME run, ds/build/screenshot.png
 ```

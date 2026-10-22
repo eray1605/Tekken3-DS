@@ -27,6 +27,8 @@ make export-web-lite    # one build; export-<macos|windows|linux|web|android|ios
 make serve-web          # serve remake/export/web-<WEB> on :8060
 make setup-ds           # DS toolchain without Wonderful (tools/ds/setup_toolchain.sh: apt GCC + picolibc + BlocksDS v1.16.0)
 make nds                # ds/tekken3.nds (make -C ds); run-nds, nds-screenshot (headless DeSmuME), clean-nds
+make convert-ds         # remake/imported → ds/nitrofs (tools/ds_import/convert.py)
+make test-ds            # DS core host tests (tools/ds/run_tests.sh [filter]; cc + UBSan, synthetic pose cases from the Python port, traces when converted)
 ```
 
 - Single test or suite: `tools/remake/run_tests.sh <substring>` matches suite file or test names (e.g. `run_tests.sh menu_exit`, `run_tests.sh test_settings`); a filtered run uses one runner.

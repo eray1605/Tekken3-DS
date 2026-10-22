@@ -32,7 +32,7 @@ export GODOT
 .DEFAULT_GOAL := help
 .PHONY: help convert convert-nomovies convert-lite import run test test-quick test-converter traces layouts export export-full export-nomovies export-lite \
 	$(addprefix export-,$(PLATFORMS)) $(foreach p,$(PLATFORMS),export-$(p)-full export-$(p)-nomovies export-$(p)-lite) \
-	serve-web clean-export setup-ds nds run-nds nds-screenshot clean-nds
+	serve-web clean-export setup-ds convert-ds nds run-nds nds-screenshot test-ds clean-nds
 
 help:
 	@echo "Setup:"
@@ -59,9 +59,11 @@ help:
 	@echo "  make clean-export     remove the builds"
 	@echo "Nintendo DS (docs/ds-port-plan.md):"
 	@echo "  make setup-ds         install the DS toolchain without the Wonderful toolchain (apt, sources)"
+	@echo "  make convert-ds       remake/imported → ds/nitrofs (the DS data; make convert first)"
 	@echo "  make nds              build $(NDS_ROM)"
 	@echo "  make run-nds          run it in an emulator (NDS_EMU=$(notdir $(NDS_EMU)))"
 	@echo "  make nds-screenshot   run it headless in DeSmuME and save ds/build/screenshot.png"
+	@echo "  make test-ds          the DS core's tests on the host (seconds; traces when converted)"
 	@echo "  make clean-nds        remove the DS build"
 
 convert:
@@ -126,6 +128,9 @@ clean-export:
 setup-ds:
 	tools/ds/setup_toolchain.sh
 
+convert-ds:
+	$(PYTHON) tools/ds_import/convert.py
+
 nds:
 	$(MAKE) -C ds
 
@@ -135,6 +140,9 @@ run-nds: nds
 nds-screenshot: nds
 	tools/ds/screenshot.sh $(NDS_ROM) ds/build/screenshot.png $(NDS_SECONDS)
 	@echo "ds/build/screenshot.png"
+
+test-ds:
+	tools/ds/run_tests.sh
 
 clean-nds:
 	$(MAKE) -C ds clean

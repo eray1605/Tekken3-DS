@@ -51,16 +51,27 @@ The PlayStation's own numbers fit this frame: 4096 angle units per turn and 4.12
 ds/
   Makefile         BlocksDS rom_arm9 build: tekken3.nds
   source/          ARM9 code
-    core/          (D1+) the C port of remake/core: no libnds, builds for the host too
-    content/       (D1+) loaders for NitroFS data
+    core/          the C port of remake/core: no libnds, builds for the host too
+      math/        fx (4.12, GTE MVMVA/GPF, MulMatrix), gte (ApplyMatrix(LV), VectorNormal, ratan2,
+                   RTPS, division), c_rand
+      fighter/     pose_tables, joint_frame, pose_solver
+    content/       loaders for the converted data (byte readers, tables/pose.bin)
+    dev/           measurements on the DS (pose_bench)
     presentation/  (D1+) 3D (fighters, stage, effects), 2D screens, HUD, sound
     platform/      (D1+) pads, save data, timing
+  tests/           host tests of core and content (C)
   nitrofs/         converted data (git-ignored)
-tools/ds/          setup_toolchain.sh, screenshot.sh, (D1+) host test runner
-tools/ds_import/   (D1) the DS converter
+tools/ds/          setup_toolchain.sh, screenshot.sh, run_tests.sh, pose_cases.py
+tools/ds_import/   the DS converter: remake/imported → ds/nitrofs
 ```
 
 Layers and dependencies as in the remake: `core` → nothing but C; `content` → `core`; `presentation` → both; `platform` and `main.c` wire them. Output leaves the simulation only as per-frame events.
+
+Code conventions:
+
+- Names follow the GDScript: `PoseSolver.build` is `pose_solver_build`, `Fx.mul_matrix` is `fx_mul_matrix`; matrices and vectors are the value types `Mat3` and `Vec3` (`int32_t`).
+- The GDScript computes in 64-bit ints and wraps or saturates where the original does. The C keeps that split: sums of GTE products are `int64_t`; wrapped C arithmetic is 32-bit modular (`fx_mul32`, unsigned casts), never signed overflow (the host tests run with UBSan).
+- Hot core files are named `*.arm.c`: BlocksDS compiles them in ARM mode, where 64-bit products are single `smull` instructions (Thumb calls a library routine). ITCM (`*.itcm.*`) is kept for when hardware timings show a need.
 
 Input: the game's pad word (PsyQ layout, `remake/platform/pad_state.gd`) from the DS keys, face buttons in the PlayStation's places (Y □, X △, B ✕, A ○), L/R as L1/R1, L2/R2 on the touch screen (`ds/source/pad.c`).
 
@@ -74,8 +85,19 @@ Input: the game's pad word (PsyQ layout, `remake/platform/pad_state.gd`) from th
 
 ### D1: One fighter
 
-- `tools/ds_import/`: one character's model (parts, seams, textures as 4/8 bpp) and motion banks from `remake/imported/` into `ds/nitrofs/`; size report against the RAM and VRAM budgets.
-- C port of `core/math` and `PoseSolver`; host build passes the pose traces (`divmot00`, `divmot99`) bit for bit.
+**Status: in progress (2026-10-22).** Done without game data:
+
+- `core/math` (fx, gte, c_rand) and the pose pipeline (`PoseTables`, `JointFrame`, `PoseSolver` with the Gameplay-fix flag `wide_elbow`) in C.
+- Host tests (`make test-ds`, seconds): the math helpers as in `test_fx.gd`, and `PoseSolver` against the verified Python port (`tools/research/pose.py`) on 2,400 frames of random poses with synthetic tables of the game's shape (`tools/ds/pose_cases.py`), slots carried over as in the traces. Branches covered: all but the bend clamps (cos above ±1), which reachable lengths do not produce. The comparison catches single-constant changes (checked by mutating the solver).
+- The trace test (`pose_divmot00`, `pose_divmot99` with the converted tables) is written and runs once `make convert`, `make convert-ds` and `tools/research/export_traces.py` have run; until then it is skipped.
+- `tools/ds_import/` writes `tables/pose.bin` from `remake/imported/tables/pose.json`.
+- On the DS (DeSmuME), one pose build costs about 0.28 ms in ARM mode (0.9 ms in Thumb): two fighters about 3.4 % of a frame. DeSmuME's timing is approximate; real hardware to be measured.
+
+Open (needs a converted disc: Japan Rev.1, Japan or USA; the European release is not supported):
+
+- Pass the pose traces bit for bit.
+- `tools/ds_import/`: one character's model (parts, seams, textures as 4/8 bpp) and motion banks into `ds/nitrofs/`; size report against the RAM and VRAM budgets. The ROM packs `ds/nitrofs/` (NitroFS) and loads the tables from it.
+- Motion sampling and the fighter skeleton (`FighterSkeleton`) in C.
 - The fighter in its stance on the DS, animated by the C core, at 60 Hz with its CPU time shown.
 
 ### D2: The fight
@@ -100,5 +122,5 @@ Input: the game's pad word (PsyQ layout, `remake/platform/pad_state.gd`) from th
 
 - **Polygon and vertex budget.** Two fighters plus stage and effects must stay under 2048 polygons; unknown until D1 counts the models. Fallback: simpler stage backdrops (2D layers on the top screen).
 - **RAM.** Motion banks and the game flow's tables must fit 4 MB with code; banks may have to be streamed per move set.
-- **CPU time.** The pose pipeline (sampling, FK, IK) for two fighters at 60 Hz on 67 MHz: to measure in D1. ITCM and Thumb/ARM choice per module.
+- **CPU time.** The pose solver for two fighters takes about 3.4 % of a frame in DeSmuME (D1); motion sampling, FK and the fight logic are still to measure, on hardware too. ITCM per module if needed.
 - **Movies.** Full-motion video is likely out of reach; at most low-resolution clips.
