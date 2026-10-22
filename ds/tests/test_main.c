@@ -31,7 +31,10 @@
     X(test_fighter_skeleton_matches_port_on_converted_data) \
     X(test_fighter_rotation_xyz_identity_and_quarter_turn) \
     X(test_model_file_checks_its_layout)          \
-    X(test_fighter_mesh_matches_port_on_converted_data)
+    X(test_fighter_mesh_matches_port_on_converted_data) \
+    X(test_pad_maps_every_ds_key)                 \
+    X(test_pad_edges_once_per_press)              \
+    X(test_stance_commands_from_the_pad)
 
 #define DECLARE(name) void name(void);
 TESTS(DECLARE)

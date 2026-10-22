@@ -1,15 +1,14 @@
 #include "pad.h"
 
-#include <nds.h>
 #include <stdio.h>
 
 static const struct {
     uint32_t key;
     uint16_t bit;
 } KEY_MAP[] = {
-    {KEY_Y, PAD_SQUARE}, {KEY_X, PAD_TRIANGLE}, {KEY_B, PAD_CROSS}, {KEY_A, PAD_CIRCLE},
-    {KEY_L, PAD_L1}, {KEY_R, PAD_R1}, {KEY_SELECT, PAD_SELECT}, {KEY_START, PAD_START},
-    {KEY_UP, PAD_UP}, {KEY_RIGHT, PAD_RIGHT}, {KEY_DOWN, PAD_DOWN}, {KEY_LEFT, PAD_LEFT},
+    {DS_KEY_Y, PAD_SQUARE}, {DS_KEY_X, PAD_TRIANGLE}, {DS_KEY_B, PAD_CROSS}, {DS_KEY_A, PAD_CIRCLE},
+    {DS_KEY_L, PAD_L1}, {DS_KEY_R, PAD_R1}, {DS_KEY_SELECT, PAD_SELECT}, {DS_KEY_START, PAD_START},
+    {DS_KEY_UP, PAD_UP}, {DS_KEY_RIGHT, PAD_RIGHT}, {DS_KEY_DOWN, PAD_DOWN}, {DS_KEY_LEFT, PAD_LEFT},
 };
 
 static const struct {
@@ -29,6 +28,14 @@ uint16_t pad_from_keys(uint32_t keys)
         if (keys & KEY_MAP[i].key)
             pad |= KEY_MAP[i].bit;
     return pad;
+}
+
+void pad_update(PadState *state, uint32_t keys)
+{
+    uint16_t held = pad_from_keys(keys);
+    state->pressed = held & (uint16_t)~state->held;
+    state->released = state->held & (uint16_t)~held;
+    state->held = held;
 }
 
 void pad_describe(uint16_t pad, char *out, int size)

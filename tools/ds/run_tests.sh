@@ -12,9 +12,11 @@ OUT="$ROOT/ds/build/host"
 CC=${CC:-cc}
 mkdir -p "$OUT"
 
-# presentation/fighter_mesh is plain C (the rest of presentation/ needs libnds).
+# Besides core/ and content/, the plain C files of the rest (which mostly needs libnds): the mesh
+# posing, the pad word and the stance scene's commands.
 SOURCES=$(find "$ROOT/ds/source/core" "$ROOT/ds/source/content" "$ROOT/ds/tests" "$ROOT/ds/source/presentation" \
     -name '*.c' ! -path '*/presentation/*' -o -name 'fighter_mesh*.c' | sort)
+SOURCES="$SOURCES $ROOT/ds/source/pad.c $ROOT/ds/source/stance_input.c"
 # shellcheck disable=SC2086
 "$CC" -std=gnu17 -O2 -g -Wall -Wextra -Werror -fsanitize=undefined -fno-sanitize-recover=undefined \
     -I"$ROOT/ds/source" -I"$ROOT/ds/tests" $SOURCES -o "$OUT/t3ds_tests"

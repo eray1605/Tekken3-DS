@@ -17,7 +17,8 @@ SOURCEDIRS := source
 INCLUDEDIRS := source
 # The converted data (make convert-ds), packed when it exists: game data, so the ROM is private.
 NITROFSDIR := $(if $(wildcard nitrofs/tables),nitrofs)
-DEFINES := -DT3DS_VERSION=\"$(shell git describe --always --dirty 2>/dev/null || echo dev)\"
+# T3DS_DEFINES adds developer switches, e.g. -DT3DS_INPUT_SCRIPT (dev/input_script.h; build clean).
+DEFINES := -DT3DS_VERSION=\"$(shell git describe --always --dirty 2>/dev/null || echo dev)\" $(T3DS_DEFINES)
 
 include $(BLOCKSDS)/sys/default_makefiles/rom_arm9/Makefile
 
